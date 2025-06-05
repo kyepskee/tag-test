@@ -1,10 +1,6 @@
 import subprocess
 import tempfile
 import sys
-# from hypothesis import given, strateges as st
-
-# @st.composite
-# def
 
 import pytest
 
@@ -12,7 +8,6 @@ FLAGS: list[str] = ["-std=c++23"]
 
 @pytest.fixture(scope="session")
 def compile():
-    print('test')
     subprocess.run(
         args=["g++", *FLAGS, "touchk.cpp", "-o", "checker"]
     )
@@ -25,18 +20,15 @@ def run(test_in: str, user_out: str, test_out: str):
     test_in_file.write(test_in.encode())
     test_out_file.write(test_out.encode())
     user_out_file.write(user_out.encode())
-    print(test_in_file)
-    print(test_in_file.name)
 
     for f in [test_in_file, test_out_file, user_out_file]:
         f.close()
 
     ret = subprocess.run(
         ["./checker", test_in_file.name, user_out_file.name, test_out_file.name],
-        # env={'USER': 'oioioiworker'},
         capture_output=True)
 
-    return ret
+    return bytes(ret, encoding='utf8')
 
 class TestCorrect():
     inputs = [("1\n2 1\n1 2 1", "NO", "NO")]
@@ -50,8 +42,8 @@ class TestWrong():
 
     @pytest.mark.parametrize("test_in,user_out,test_out", inputs)
     def test_wrong(self, compile, test_in, test_out, user_out):
-        assert run(test_in, test_out, user_out).stdout == b'WRONG\n\n0\n'
-        
+        assert run(test_in, test_out, user_out).stdout == 'WRONG\n\n0\n'
+
 def wrong_message(line, pos, message, score = 0):
     return bytes(f"WRONG\nWiersz {line}, pozycja {pos}: {message}\n{score}\n", encoding='utf8')
 
@@ -71,22 +63,9 @@ class TestVerbatim():
 1 2 1""",
                 "NO\nNO",
                 "NO\n\nNO",
-                wrong_expected(2, 1, "\\n", "napisu")
+                wrong_expected(line=2, pos=1, char="\\n", expected="napisu")
             )]
 
     @pytest.mark.parametrize("test_in,user_out,test_out,checker_out", inputs)
     def test_verbatim(self, compile, test_in, test_out, user_out, checker_out):
         assert run(test_in, test_out, user_out).stdout == checker_out
-
-def main():
-    A="""1
-    2 1
-    1 2 1
-    """
-    B="NO"
-    C="NO"
-    res = run(A, B, C)
-    print(res.stdout)
-
-if __name__ == '__main__':
-    sys.exit(main())
